@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_train/provider.dart';
 import 'package:flutter_train/screens/posts.dart';
 import 'package:flutter_train/screens/register.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_train/screens/testpost.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,13 +18,18 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-          //  primarySwatch: Colors.red,
-          ),
-      home: Posts(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ChangeLikeProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Flutter Demo',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+            //  primarySwatch: Colors.red,
+            ),
+        home: Posts(),
+      ),
     );
   }
 }

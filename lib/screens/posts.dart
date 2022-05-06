@@ -1,9 +1,13 @@
 import 'dart:io';
 
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_train/models/post_model.dart';
+import 'package:flutter_train/provider.dart';
+import 'package:flutter_train/screens/post_details.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 
 class Posts extends StatefulWidget {
   const Posts({Key? key}) : super(key: key);
@@ -13,6 +17,7 @@ class Posts extends StatefulWidget {
 }
 
 class _PostsState extends State<Posts> {
+  String? downloadURL;
   List<Map<String, dynamic>> data = [
     // تعريف ليست ليتم تخزين بها بيانات البوست
     //{'name': "Sayed", 'time': "7", 'des': 'dfdsf'}
@@ -56,12 +61,23 @@ class _PostsState extends State<Posts> {
                     list.length, // عدد مرات التكرار و هنا يمثل عدد عناصر الليست
                 itemBuilder: (context, index) {
                   // البيلدر و يتم ادراج به الديزاين المراد تكراره
-                  return DesignPost(
-                    // اذهب الي كود ال design post
-                    name: list[index].name!,
-                    time: list[index].time!.toString(),
-                    descripsion: list[index].details!.toString(),
-                    image: list[index].image!,
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => PostDetails(
+                                  dataPost: list[index],
+                                )),
+                      );
+                    },
+                    child: DesignPost(
+                      // اذهب الي كود ال design post
+                      name: list[index].name!,
+                      time: list[index].time!.toString(),
+                      descripsion: list[index].details!.toString(),
+                      image: list[index].image!,
+                    ),
                   );
                 },
               );
@@ -158,9 +174,23 @@ class _PostsState extends State<Posts> {
                           ElevatedButton(
                               onPressed: () async {
                                 if (formkey.currentState!.validate()) {
+                                  String imageName = DateTime.now().toString();
+
+                                  try {
+                                    await FirebaseStorage.instance
+                                        .ref(imageName)
+                                        .putFile(pickedImage!);
+                                    downloadURL = await FirebaseStorage.instance
+                                        .ref(imageName)
+                                        .getDownloadURL();
+                                    print(downloadURL);
+                                  } on FirebaseException catch (e) {
+                                    // e.g, e.code == 'canceled'
+                                  }
+
                                   PostModel postModel = PostModel(
                                       name: f1.text,
-                                      image: 'ssss',
+                                      image: downloadURL,
                                       time: DateTime.now().toString(),
                                       details: f3.text);
 
@@ -207,7 +237,7 @@ class _PostsState extends State<Posts> {
   }
 }
 
-class DesignPost extends StatelessWidget {
+class DesignPost extends StatefulWidget {
   DesignPost(
       {Key? key,
       required this.name,
@@ -219,11 +249,17 @@ class DesignPost extends StatelessWidget {
       time,
       descripsion; // يتم تعريف الداتا المتغيره الخاص بالبوست كاسم الشخص و الوصف و الصوره
   String image;
-  String url = // مثال للصوره
-      'https://scontent.fcai1-2.fna.fbcdn.net/v/t1.6435-1/186498607_2913876452226196_5327581913643662490_n.jpg?stp=dst-jpg_s320x320&_nc_cat=104&ccb=1-5&_nc_sid=7206a8&_nc_eui2=AeHkAQ-BxGsyODCa3b42T2yLD1bpxPmUIFAPVunE-ZQgUFNN4RpA4cpjskmC0nFJrIuOKXoTzUX22JW58x2B6qUy&_nc_ohc=C8GlOG06j2UAX83GCUN&_nc_ht=scontent.fcai1-2.fna&oh=00_AT-tsLg1stgoObQZK-zvj9pY_JLSZpA8_CowkX4URJHdYA&oe=624E118F';
 
   @override
+  State<DesignPost> createState() => _DesignPostState();
+}
+
+class _DesignPostState extends State<DesignPost> {
+  String url = // مثال للصوره
+      'https://scontent.fcai1-2.fna.fbcdn.net/v/t1.6435-1/186498607_2913876452226196_5327581913643662490_n.jpg?stp=dst-jpg_s320x320&_nc_cat=104&ccb=1-5&_nc_sid=7206a8&_nc_eui2=AeHkAQ-BxGsyODCa3b42T2yLD1bpxPmUIFAPVunE-ZQgUFNN4RpA4cpjskmC0nFJrIuOKXoTzUX22JW58x2B6qUy&_nc_ohc=C8GlOG06j2UAX83GCUN&_nc_ht=scontent.fcai1-2.fna&oh=00_AT-tsLg1stgoObQZK-zvj9pY_JLSZpA8_CowkX4URJHdYA&oe=624E118F';
+  @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<ChangeLikeProvider>(context);
     return Container(
       height: 420,
       padding: EdgeInsets.all(10),
@@ -243,7 +279,7 @@ class DesignPost extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    name, //هنا وضع الاسم الذى تم تعريفه بالاعلي
+                    widget.name, //هنا وضع الاسم الذى تم تعريفه بالاعلي
                     //'Sayed Ashrf',
                     style: TextStyle(
                         fontSize: 12,
@@ -251,7 +287,7 @@ class DesignPost extends StatelessWidget {
                         fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '$time h', //هنا وضع الوقت الذى تم تعريفه بالاعلي
+                    '${widget.time} h', //هنا وضع الوقت الذى تم تعريفه بالاعلي
                     style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade500,
@@ -274,7 +310,7 @@ class DesignPost extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
-                descripsion,
+                widget.descripsion,
                 //   'REERAS ,It is not just a place, it is a country that we work for and we devote our efforts to its progress and the secret of its strength is our collective work and our union  Sayed Ashrf our Flutter Developer',
                 style: TextStyle(
                     fontSize: 12,
@@ -291,7 +327,7 @@ class DesignPost extends StatelessWidget {
               child: Image.network(
                 // هنا تم وضع الصوره اللي تم تعريفها بالاعلي و هي بالاصل تاتى من الهاتف و تم استخدام
                 // نوع file لهدا السبب
-                image,
+                widget.image,
                 width: 250,
                 height: 250,
                 fit: BoxFit.fill,
@@ -305,17 +341,25 @@ class DesignPost extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Row(
-                    children: [
-                      Text('Like'),
-                      SizedBox(
-                        width: 3,
-                      ),
-                      Icon(
-                        Icons.favorite_sharp,
-                        size: 20,
-                      )
-                    ],
+                  GestureDetector(
+                    onTap: () {
+                      // provider.changLike();
+                      print(like);
+                      setState(() {});
+                    },
+                    child: Row(
+                      children: [
+                        Text('Like'),
+                        SizedBox(
+                          width: 3,
+                        ),
+                        Icon(
+                          Icons.favorite_sharp,
+                          size: 20,
+                          color: provider.isLike ? Colors.red : Colors.black,
+                        )
+                      ],
+                    ),
                   ),
                   Row(
                     children: [
